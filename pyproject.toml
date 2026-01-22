@@ -1,0 +1,46 @@
+[build-system]
+requires = ["hatchling>=1.24.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "whisperx-modal-transcription"
+version = "0.1.0"
+description = "Modal + FastAPI endpoint for WhisperX transcription with callback delivery."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+
+# These must exist locally because Modal imports your module locally
+# (modal run/deploy imports the file to build the app graph).
+dependencies = [
+  "modal",
+  "fastapi[standard]",
+  "pydantic>=2",
+  "httpx>=0.24",
+]
+
+[project.optional-dependencies]
+dev = [
+  "ruff>=0.6",
+  "black>=24.0",
+  "mypy>=1.8",
+]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_ignores = true
+disallow_untyped_defs = false
+no_implicit_optional = true

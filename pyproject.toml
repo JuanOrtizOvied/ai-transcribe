@@ -1,6 +1,6 @@
 [build-system]
-requires = ["hatchling>=1.24.0"]
-build-backend = "hatchling.build"
+requires = ["setuptools>=69.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "whisperx-modal-transcription"
@@ -10,8 +10,6 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 
-# These must exist locally because Modal imports your module locally
-# (modal run/deploy imports the file to build the app graph).
 dependencies = [
   "modal",
   "fastapi[standard]",
@@ -25,6 +23,13 @@ dev = [
   "black>=24.0",
   "mypy>=1.8",
 ]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["whisperx_service*"]
 
 [tool.black]
 line-length = 100
@@ -42,5 +47,4 @@ ignore = ["E501"]
 python_version = "3.11"
 warn_return_any = true
 warn_unused_ignores = true
-disallow_untyped_defs = false
 no_implicit_optional = true

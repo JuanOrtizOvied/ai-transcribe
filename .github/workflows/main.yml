@@ -33,4 +33,4 @@ jobs:
           # pip install -e ".[dev]"
 
       - name: Deploy to Modal
-        run: modal deploy -m src.whisperx.main
+        run: modal deploy -m src.whisperx_service.main

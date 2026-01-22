@@ -16,22 +16,22 @@ logger = logging.getLogger(__name__)
 
 # Create Modal image with WhisperX dependencies
 image = (
-    modal.Image.from_registry("nvidia/cuda:12.1.1-devel-ubuntu22.04", add_python="3.11")
+    modal.Image.from_registry("nvidia/cuda:12.8.0-devel-ubuntu22.04", add_python="3.11")
     .apt_install("git", "ffmpeg", "libcudnn8", "libcudnn8-dev")
     .pip_install(
+        "torch==2.8.0+cu121",
+        "torchaudio==2.8.0+cu121",
+        "torchvision==0.23.0+cu121",
+        extra_options="--extra-index-url https://download.pytorch.org/whl/cu121",
+    )
+    .pip_install(
         [
-            # Pin torch stack (CUDA 12.1)
-            "torch==2.1.0+cu121",
-            "torchaudio==2.1.0+cu121",
-            "torchvision==0.16.0+cu121",
-
-            # App deps (local + container)
             "whisperx",
             "fastapi[standard]",
-            "pydantic>=2",
+            "pydantic",
             "httpx",
-        ],
-        extra_options="--extra-index-url https://download.pytorch.org/whl/cu121 --upgrade-strategy only-if-needed",
+        ]
+
     )
 )
 
@@ -74,15 +74,16 @@ class WhisperXModel:
         """Load WhisperX model on container startup."""
         import whisperx
         import torch
-
         logger.info(f"Torch version: {torch.__version__}")
+        logger.info(f"WhisperX version: {getattr(whisperx, '__version__', 'unknown')}")
 
         self.device = "cuda"
         self.model_name = "large-v2"
         self.batch_size = 24
+        self.compute_type = "float16" # change to "int8" if low on GPU mem (may reduce accuracy)
 
         logger.info(f"Loading WhisperX model: {self.model_name}")
-        self.model = whisperx.load_model(self.model_name, self.device)
+        self.model = whisperx.load_model(self.model_name, self.device, compute_type=self.compute_type)
         logger.info("WhisperX model loaded successfully")
 
     @modal.method()

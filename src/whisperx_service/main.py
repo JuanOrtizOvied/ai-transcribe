@@ -66,15 +66,18 @@ class CallbackPayload(BaseModel):
     error: Optional[str] = None
 
 
-@app.cls(gpu="A10G", timeout=60 * 10, retries=1, scaledown_window=30)
+@app.cls(gpu="A10G", timeout=60 * 10, retries=1, scaledown_window=30, env={"TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD": "true"})
 class WhisperXModel:
     """WhisperX model for audio transcription."""
 
     @modal.enter()
     def setup(self):
         """Load WhisperX model on container startup."""
+        import os
         import whisperx
         import torch
+
+        os.environ["TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD"] = "true"
 
         logger.info(f"Torch version: {torch.__version__}")
         logger.info(f"WhisperX version: {getattr(whisperx, '__version__', 'unknown')}")

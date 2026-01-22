@@ -105,7 +105,7 @@ class WhisperXModel:
 
         self.device = "cuda"
         self.model_name = "large-v2"
-        self.batch_size = 24
+        self.batch_size = 16
         self.compute_type = "float32" # change to "int8" if low on GPU mem (may reduce accuracy)
 
         # ✅ decoding / ASR config goes HERE (not in transcribe())
@@ -122,6 +122,7 @@ class WhisperXModel:
             self.device,
             compute_type=self.compute_type,
             asr_options=self.asr_options,
+            vad_method="silero",
         )
         logger.info("WhisperX model loaded successfully")
         # ✅ Pega esto aquí

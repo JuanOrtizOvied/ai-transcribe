@@ -76,11 +76,19 @@ class WhisperXModel:
         import os
         import whisperx
         import torch
+        from importlib.metadata import version, PackageNotFoundError
 
         os.environ["TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD"] = "true"
 
         logger.info(f"Torch version: {torch.__version__}")
-        logger.info(f"WhisperX version: {getattr(whisperx, '__version__', 'unknown')}")
+
+        try:
+            wx_version = version("whisperx")  # nombre del distribution en pip
+        except PackageNotFoundError:
+            wx_version = "unknown (distribution not found)"
+
+        logger.info(f"WhisperX version: {wx_version}")
+        logger.info(f"WhisperX module path: {whisperx.__file__}")
 
         # ✅ Torch>=2.6 safe-unpickling allowlist (pyannote checkpoints)
         try:
@@ -104,6 +112,7 @@ class WhisperXModel:
             self.model_name,
             self.device,
             compute_type=self.compute_type,
+            vad_method="silero",
         )
         logger.info("WhisperX model loaded successfully")
 

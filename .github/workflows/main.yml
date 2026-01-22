@@ -2,12 +2,12 @@ name: CI/CD
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
+  workflow_dispatch: {}
 
 jobs:
   deploy:
-    name: Deploy
+    name: Deploy to Modal
     runs-on: ubuntu-latest
     env:
       MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
@@ -17,16 +17,20 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: "pip"
 
-      - name: Install Modal
-        run: |
-          python -m pip install --upgrade pip
-          pip install modal
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip
 
-      - name: Deploy job
+      - name: Install project + deploy deps
         run: |
-          modal deploy -m main
+          pip install -e .
+          # Optional dev tools if you want them in CI:
+          # pip install -e ".[dev]"
+
+      - name: Deploy to Modal
+        run: modal deploy -m main

@@ -96,7 +96,7 @@ class WhisperXModel:
 
         self.device = "cuda"
         self.model_name = "large-v2"
-        self.batch_size = 24
+        self.batch_size = 16
         self.compute_type = "float16" # change to "int8" if low on GPU mem (may reduce accuracy)
 
         logger.info(f"Loading WhisperX model: {self.model_name}")

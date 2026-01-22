@@ -30,6 +30,7 @@ image = (
             "fastapi[standard]",
             "pydantic",
             "httpx",
+            "omegaconf",
         ]
 
     )
@@ -74,8 +75,21 @@ class WhisperXModel:
         """Load WhisperX model on container startup."""
         import whisperx
         import torch
+
         logger.info(f"Torch version: {torch.__version__}")
         logger.info(f"WhisperX version: {getattr(whisperx, '__version__', 'unknown')}")
+
+        # ✅ Torch>=2.6 safe-unpickling allowlist (pyannote checkpoints)
+        try:
+            from omegaconf import DictConfig, ListConfig
+
+            if hasattr(torch.serialization, "add_safe_globals"):
+                torch.serialization.add_safe_globals([ListConfig, DictConfig])
+                logger.info("Added OmegaConf safe globals (ListConfig, DictConfig).")
+            else:
+                logger.warning("torch.serialization.add_safe_globals not found; skipping.")
+        except Exception as e:
+            logger.warning(f"Could not add OmegaConf safe globals: {e}")
 
         self.device = "cuda"
         self.model_name = "large-v2"
@@ -83,7 +97,11 @@ class WhisperXModel:
         self.compute_type = "float16" # change to "int8" if low on GPU mem (may reduce accuracy)
 
         logger.info(f"Loading WhisperX model: {self.model_name}")
-        self.model = whisperx.load_model(self.model_name, self.device, compute_type=self.compute_type)
+        self.model = whisperx.load_model(
+            self.model_name,
+            self.device,
+            compute_type=self.compute_type,
+        )
         logger.info("WhisperX model loaded successfully")
 
     @modal.method()

@@ -26,7 +26,7 @@ image = (
     )
     .pip_install(
         [
-            "whisperx_service",
+            "whisperx",
             "fastapi[standard]",
             "pydantic",
             "httpx",

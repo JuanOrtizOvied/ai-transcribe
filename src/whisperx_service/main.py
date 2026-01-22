@@ -76,6 +76,7 @@ class WhisperXModel:
         import os
         import whisperx
         import torch
+        import inspect
         from importlib.metadata import version, PackageNotFoundError
 
         os.environ["TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD"] = "true"
@@ -104,8 +105,8 @@ class WhisperXModel:
 
         self.device = "cuda"
         self.model_name = "large-v2"
-        self.batch_size = 16
-        self.compute_type = "float16" # change to "int8" if low on GPU mem (may reduce accuracy)
+        self.batch_size = 24
+        self.compute_type = "float32" # change to "int8" if low on GPU mem (may reduce accuracy)
 
         logger.info(f"Loading WhisperX model: {self.model_name}")
         self.model = whisperx.load_model(
@@ -115,6 +116,8 @@ class WhisperXModel:
             vad_method="silero",
         )
         logger.info("WhisperX model loaded successfully")
+        # ✅ Pega esto aquí
+        logger.info(f"transcribe signature: {inspect.signature(self.model.transcribe)}")
 
     @modal.method()
     def transcribe(self, audio_url: str) -> dict:
@@ -239,7 +242,13 @@ class WhisperXModel:
 
             # Transcribe
             logger.info("Starting transcription...")
-            result = self.model.transcribe(audio, batch_size=self.batch_size)
+            result = self.model.transcribe(
+                audio,
+                batch_size=self.batch_size,
+                language="es",
+                beam_size=5,
+                temperature=0.0,
+            )
 
             logger.info(f"Transcription result keys: {list(result.keys())}")
 

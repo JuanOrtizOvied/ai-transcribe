@@ -108,12 +108,20 @@ class WhisperXModel:
         self.batch_size = 24
         self.compute_type = "float32" # change to "int8" if low on GPU mem (may reduce accuracy)
 
+        # ✅ decoding / ASR config goes HERE (not in transcribe())
+        self.asr_options = {
+            "beam_size": 5,  # <-- set beam size here
+            "without_timestamps": False,
+            # often improves quality vs WhisperX default :contentReference[oaicite:1]{index=1}
+            "condition_on_previous_text": True  # closer behavior to "plain Whisper" continuity
+        }
+
         logger.info(f"Loading WhisperX model: {self.model_name}")
         self.model = whisperx.load_model(
             self.model_name,
             self.device,
             compute_type=self.compute_type,
-            vad_method="silero",
+            asr_options=self.asr_options,
         )
         logger.info("WhisperX model loaded successfully")
         # ✅ Pega esto aquí
@@ -245,9 +253,9 @@ class WhisperXModel:
             result = self.model.transcribe(
                 audio,
                 batch_size=self.batch_size,
-                language="es",
-                beam_size=5,
-                temperature=0.0,
+                chunk_size=30,
+                language="es",  # si ya lo sabes
+                task="transcribe",
             )
 
             logger.info(f"Transcription result keys: {list(result.keys())}")

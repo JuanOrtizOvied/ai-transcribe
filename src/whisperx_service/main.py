@@ -14,6 +14,9 @@ from pydantic import BaseModel, HttpUrl
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# ✅ Modal Secret (must exist in Modal: "huggingface")
+HF_SECRET = modal.Secret.from_name("huggingface")
+
 # Create Modal image with WhisperX dependencies
 image = (
     modal.Image.from_registry("nvidia/cuda:12.8.0-devel-ubuntu22.04", add_python="3.11")
@@ -34,6 +37,9 @@ image = (
         ]
 
     )
+    .env({
+        "TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD": "true"
+    })
 )
 
 # Create Modal app
@@ -63,23 +69,22 @@ class CallbackPayload(BaseModel):
     message: str
     timestamp: str
     result: Optional[dict] = None
+    result_align: Optional[dict] = None
+    result_diarize: Optional[dict] = None
     error: Optional[str] = None
 
 
-@app.cls(gpu="A10G", timeout=60 * 10, retries=1, scaledown_window=30, env={"TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD": "true"})
+@app.cls(gpu="A10G", timeout=60 * 10, retries=1, scaledown_window=30, secrets=[HF_SECRET])
 class WhisperXModel:
     """WhisperX model for audio transcription."""
 
     @modal.enter()
     def setup(self):
         """Load WhisperX model on container startup."""
-        import os
         import whisperx
         import torch
         import inspect
         from importlib.metadata import version, PackageNotFoundError
-
-        os.environ["TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD"] = "true"
 
         logger.info(f"Torch version: {torch.__version__}")
 
@@ -218,6 +223,7 @@ class WhisperXModel:
         from urllib.parse import urlparse
 
         import whisperx
+        from whisperx.diarize import DiarizationPipeline
 
         callback_payload = None
 
@@ -278,6 +284,33 @@ class WhisperXModel:
                 "duration": len(audio) / 16000,  # Assuming 16kHz sample rate
             }
 
+            # ✅ Hugging Face token from Modal Secret (runtime)
+            hf_token = os.environ.get("HUGGINGFACE_ACCESS_TOKEN")
+            if not hf_token:
+                raise RuntimeError(
+                    "HUGGINGFACE_ACCESS_TOKEN is missing. "
+                    "Create Modal secret: modal secret create huggingface HUGGINGFACE_ACCESS_TOKEN=..."
+                )
+
+            # 2. Align whisper output
+            model_a, metadata = whisperx.load_align_model(language_code=result["language"], device=self.device)
+            result_align = whisperx.align(result["segments"], model_a, metadata, audio, self.device, return_char_alignments=False)
+
+            logger.info(f"Resul Align segments: {result_align['segments']}")
+
+            # delete model if low on GPU resources
+            # import gc; import torch; gc.collect(); torch.cuda.empty_cache(); del model_a
+
+            # 3. Assign speaker labels
+            diarize_model = DiarizationPipeline(use_auth_token=hf_token, device=self.device)
+
+            # add min/max number of speakers if known
+            diarize_segments = diarize_model(audio)
+            # diarize_model(audio, min_speakers=min_speakers, max_speakers=max_speakers)
+
+            result_diarize = whisperx.assign_word_speakers(diarize_segments, result)
+            print(diarize_segments)
+
             # Prepare success callback payload
             callback_payload = CallbackPayload(
                 request_id=request_id,
@@ -285,6 +318,8 @@ class WhisperXModel:
                 message="Audio transcription completed successfully",
                 timestamp=datetime.now().isoformat(),
                 result=transcription_result,
+                result_align=result_align,
+                result_diarize=result_diarize,
             )
 
         except Exception as e:

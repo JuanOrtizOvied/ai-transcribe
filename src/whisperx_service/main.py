@@ -89,15 +89,15 @@ class WhisperXModel:
         from importlib.metadata import version, PackageNotFoundError
 
         # ✅ Hugging Face token from Modal Secret (runtime)
-        hf_token = os.environ.get("HUGGINGFACE_ACCESS_TOKEN")
+        token = os.environ.get("HUGGINGFACE_ACCESS_TOKEN")
 
-        if not hf_token:
+        if not token:
             raise RuntimeError(
                 "HUGGINGFACE_ACCESS_TOKEN is missing. "
                 "Create Modal secret: modal secret create huggingface HUGGINGFACE_ACCESS_TOKEN=..."
             )
 
-        logger.info(f"HUGGINGFACE_ACCESS_TOKEN len: {len(hf_token)}")
+        logger.info(f"HUGGINGFACE_ACCESS_TOKEN len: {len(token)}")
         logger.info(f"Torch version: {torch.__version__}")
 
         try:
@@ -124,7 +124,7 @@ class WhisperXModel:
         self.model_name = "large-v2"
         self.batch_size = 16
         self.compute_type = "float32" # change to "int8" if low on GPU mem (may reduce accuracy)
-        self.hf_token = hf_token
+        self.hf_token = token
 
         # ✅ decoding / ASR config goes HERE (not in transcribe())
         self.asr_options = {

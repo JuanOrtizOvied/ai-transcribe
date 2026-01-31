@@ -305,6 +305,8 @@ class WhisperXModel:
             # delete model if low on GPU resources
             # import gc; import torch; gc.collect(); torch.cuda.empty_cache(); del model_a
 
+            logger.info(f"self.hf_token len: {len(self.hf_token)}")
+
             # 3. Assign speaker labels
             diarize_model = DiarizationPipeline(use_auth_token=self.hf_token, device=self.device)
 

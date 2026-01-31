@@ -206,7 +206,7 @@ class WhisperXModel:
                     pass
             raise
 
-    @modal.method()
+    @modal.method(secrets=[HF_SECRET])
     def transcribe_with_callback(
         self, request_id: str, audio_url: str, callback_url: str
     ) -> None:
@@ -231,6 +231,14 @@ class WhisperXModel:
             logger.info(f"Starting transcription for request: {request_id}")
             logger.info(f"Audio URL: {audio_url}")
             logger.info(f"Callback URL: {callback_url}")
+
+            # ✅ Hugging Face token from Modal Secret (runtime)
+            hf_token = os.environ.get("HUGGINGFACE_ACCESS_TOKEN")
+            if not hf_token:
+                raise RuntimeError(
+                    "HUGGINGFACE_ACCESS_TOKEN is missing. "
+                    "Create Modal secret: modal secret create huggingface HUGGINGFACE_ACCESS_TOKEN=..."
+                )
 
             # Perform transcription directly (can't call self.transcribe from within Modal method)
             # Download audio file
@@ -283,14 +291,6 @@ class WhisperXModel:
                 "segments": segments,
                 "duration": len(audio) / 16000,  # Assuming 16kHz sample rate
             }
-
-            # ✅ Hugging Face token from Modal Secret (runtime)
-            hf_token = os.environ.get("HUGGINGFACE_ACCESS_TOKEN")
-            if not hf_token:
-                raise RuntimeError(
-                    "HUGGINGFACE_ACCESS_TOKEN is missing. "
-                    "Create Modal secret: modal secret create huggingface HUGGINGFACE_ACCESS_TOKEN=..."
-                )
 
             # 2. Align whisper output
             model_a, metadata = whisperx.load_align_model(language_code=result["language"], device=self.device)

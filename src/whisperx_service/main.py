@@ -216,7 +216,7 @@ class WhisperXModel:
                     pass
             raise
 
-    @modal.method(secrets=[HF_SECRET])
+    @modal.method()
     def transcribe_with_callback(
         self, request_id: str, audio_url: str, callback_url: str,
     ) -> None:

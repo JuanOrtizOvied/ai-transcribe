@@ -81,10 +81,19 @@ class WhisperXModel:
     @modal.enter()
     def setup(self):
         """Load WhisperX model on container startup."""
+        import os
         import whisperx
         import torch
         import inspect
         from importlib.metadata import version, PackageNotFoundError
+
+        # ✅ Hugging Face token from Modal Secret (runtime)
+        hf_token = os.environ.get("HUGGINGFACE_ACCESS_TOKEN")
+        if not hf_token:
+            raise RuntimeError(
+                "HUGGINGFACE_ACCESS_TOKEN is missing. "
+                "Create Modal secret: modal secret create huggingface HUGGINGFACE_ACCESS_TOKEN=..."
+            )
 
         logger.info(f"Torch version: {torch.__version__}")
 
@@ -112,6 +121,7 @@ class WhisperXModel:
         self.model_name = "large-v2"
         self.batch_size = 16
         self.compute_type = "float32" # change to "int8" if low on GPU mem (may reduce accuracy)
+        self.hf_token = hf_token
 
         # ✅ decoding / ASR config goes HERE (not in transcribe())
         self.asr_options = {
@@ -208,7 +218,7 @@ class WhisperXModel:
 
     @modal.method(secrets=[HF_SECRET])
     def transcribe_with_callback(
-        self, request_id: str, audio_url: str, callback_url: str
+        self, request_id: str, audio_url: str, callback_url: str,
     ) -> None:
         """
         Transcribe audio and send result to callback URL.
@@ -231,14 +241,6 @@ class WhisperXModel:
             logger.info(f"Starting transcription for request: {request_id}")
             logger.info(f"Audio URL: {audio_url}")
             logger.info(f"Callback URL: {callback_url}")
-
-            # ✅ Hugging Face token from Modal Secret (runtime)
-            hf_token = os.environ.get("HUGGINGFACE_ACCESS_TOKEN")
-            if not hf_token:
-                raise RuntimeError(
-                    "HUGGINGFACE_ACCESS_TOKEN is missing. "
-                    "Create Modal secret: modal secret create huggingface HUGGINGFACE_ACCESS_TOKEN=..."
-                )
 
             # Perform transcription directly (can't call self.transcribe from within Modal method)
             # Download audio file
@@ -302,7 +304,7 @@ class WhisperXModel:
             # import gc; import torch; gc.collect(); torch.cuda.empty_cache(); del model_a
 
             # 3. Assign speaker labels
-            diarize_model = DiarizationPipeline(use_auth_token=hf_token, device=self.device)
+            diarize_model = DiarizationPipeline(use_auth_token=self.hf_token, device=self.device)
 
             # add min/max number of speakers if known
             diarize_segments = diarize_model(audio)
@@ -386,7 +388,7 @@ async def transcribe_audio(
         # Start background transcription task (fire and forget)
         # Use spawn() for true fire-and-forget behavior in modal
         WhisperXModel().transcribe_with_callback.spawn(
-            request_id, str(request.audio_url), str(request.callback_url)
+            request_id, str(request.audio_url), str(request.callback_url),
         )
 
         logger.info(f"Background transcription started for request: {request_id}")

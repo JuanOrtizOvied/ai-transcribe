@@ -366,8 +366,8 @@ class WhisperXModel:
                 logger.error(f"Callback error traceback: {traceback.format_exc()}")
 
 
-@app.function(secrets=[HF_SECRET])
-@modal.fastapi_endpoint(method="POST")
+@app.function()
+@modal.fastapi_endpoint(method="POST", secrets=[HF_SECRET])
 async def transcribe_audio(
     request: TranscriptionRequest, response: Response
 ) -> TranscriptionResponse:

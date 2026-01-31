@@ -89,12 +89,14 @@ class WhisperXModel:
 
         # ✅ Hugging Face token from Modal Secret (runtime)
         hf_token = os.environ.get("HUGGINGFACE_ACCESS_TOKEN")
+
         if not hf_token:
             raise RuntimeError(
                 "HUGGINGFACE_ACCESS_TOKEN is missing. "
                 "Create Modal secret: modal secret create huggingface HUGGINGFACE_ACCESS_TOKEN=..."
             )
 
+        logger.info(f"HUGGINGFACE_ACCESS_TOKEN len: {len(hf_token)}")
         logger.info(f"Torch version: {torch.__version__}")
 
         try:

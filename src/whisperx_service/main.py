@@ -34,6 +34,7 @@ image = (
             "pydantic",
             "httpx",
             "omegaconf",
+            "huggingface_hub",
         ]
 
     )
